@@ -32,7 +32,6 @@ func (s Severity) String() string {
 	}
 
 	panic("unrecognized severity")
-	return "????"
 }
 
 const (

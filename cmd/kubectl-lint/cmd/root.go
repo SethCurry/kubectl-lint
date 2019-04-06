@@ -21,6 +21,8 @@ var cfgFile string
 var builderFlags = genericclioptions.NewResourceBuilderFlags()
 var configFlags = genericclioptions.NewConfigFlags(true)
 
+var logger = zap.NewNop()
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kubectl-lint",
@@ -31,13 +33,30 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		logger, err := zap.NewDevelopment()
-		if err != nil {
-			panic(err)
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		if viper.GetBool("verbose") {
+			var err error
+			logger, err = zap.NewDevelopment()
+			if err != nil {
+				fmt.Println("Failed to create logger!")
+				panic(err)
+			}
 		}
-
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		runner := lint.NewRunner(lint.WithLinters(linters.All()), lint.WithLogger(logger))
+
+		disabledLinters := viper.GetStringSlice("disable")
+		logger.Debug("disabling linters",
+			zap.Strings("error_codes", disabledLinters),
+		)
+		for _, v := range viper.GetStringSlice("disable") {
+			err := runner.DisableLinter(lint.ErrorCode(v))
+			if err != nil {
+				fmt.Println("Failed to disable linter.")
+				panic(err)
+			}
+		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 
@@ -89,9 +108,11 @@ func init() {
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kubectl-lint.yaml)")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().StringSliceP("disable", "d", []string{}, "Comma separated list of error codes to disable.")
+	viper.BindPFlag("disable", rootCmd.Flags().Lookup("disable"))
+
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enables the built-in logger for debugging.")
+	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 }
 
 // initConfig reads in config file and ENV variables if set.

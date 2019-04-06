@@ -27,7 +27,11 @@ func (h *HasCPULimitLinter) Severity() lint.Severity {
 
 func (h *HasCPULimitLinter) ValidScopes() []scopes.Scope {
 	return []scopes.Scope{
-		scopes.And(scopes.Kind("Pod"), scopes.Version("v1")),
+		scopes.Or(
+			scopes.And(scopes.Kind("Pod"), scopes.Version("v1")),
+			scopes.And(scopes.Kind("Deployment"), scopes.Version("v1")),
+			scopes.And(scopes.Kind("DaemonSet"), scopes.Version("v1")),
+		),
 	}
 }
 
@@ -35,10 +39,10 @@ func (h *HasCPULimitLinter) Lint(info *resource.Info) ([]lint.ErrorMessage, erro
 	return []lint.ErrorMessage{}, errors.New("this should be handled by the pod linter")
 }
 
-func (h *HasCPULimitLinter) Lintv1Pod(pod *core_v1.Pod) ([]lint.ErrorMessage, error) {
+func (h *HasCPULimitLinter) Lintv1PodSpec(spec core_v1.PodSpec) ([]lint.ErrorMessage, error) {
 	var ret []lint.ErrorMessage
 
-	containers := append(pod.Spec.Containers, pod.Spec.InitContainers...)
+	containers := append(spec.Containers, spec.InitContainers...)
 
 	for _, v := range containers {
 		if _, ok := v.Resources.Limits["cpu"]; !ok {

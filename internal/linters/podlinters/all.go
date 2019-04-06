@@ -8,5 +8,8 @@ func All() []lint.Linter {
 		HasMemoryLimit(),
 		HasCPURequest(),
 		HasCPULimit(),
+		NoPrivileged(),
+		HasLivenessCheck(),
+		HasReadinessCheck(),
 	}
 }

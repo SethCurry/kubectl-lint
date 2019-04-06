@@ -10,22 +10,22 @@ import (
 	"k8s.io/cli-runtime/pkg/resource"
 )
 
-func HasMemoryRequest() *HasMemoryRequestLinter {
-	return &HasMemoryRequestLinter{}
+func HasLivenessCheck() *HasLivenessCheckLinter {
+	return &HasLivenessCheckLinter{}
 }
 
-type HasMemoryRequestLinter struct {
+type HasLivenessCheckLinter struct {
 }
 
-func (h *HasMemoryRequestLinter) ErrorCode() lint.ErrorCode {
-	return lint.ErrorCode("has-memory-request")
+func (h *HasLivenessCheckLinter) ErrorCode() lint.ErrorCode {
+	return lint.ErrorCode("has-liveness-check")
 }
 
-func (h *HasMemoryRequestLinter) Severity() lint.Severity {
+func (h *HasLivenessCheckLinter) Severity() lint.Severity {
 	return lint.SeverityWarn
 }
 
-func (h *HasMemoryRequestLinter) ValidScopes() []scopes.Scope {
+func (h *HasLivenessCheckLinter) ValidScopes() []scopes.Scope {
 	return []scopes.Scope{
 		scopes.Or(
 			scopes.And(scopes.Kind("Pod"), scopes.Version("v1")),
@@ -35,18 +35,18 @@ func (h *HasMemoryRequestLinter) ValidScopes() []scopes.Scope {
 	}
 }
 
-func (h *HasMemoryRequestLinter) Lint(info *resource.Info) ([]lint.ErrorMessage, error) {
+func (h *HasLivenessCheckLinter) Lint(info *resource.Info) ([]lint.ErrorMessage, error) {
 	return []lint.ErrorMessage{}, errors.New("this should be handled by the pod linter")
 }
 
-func (h *HasMemoryRequestLinter) Lintv1PodSpec(spec core_v1.PodSpec) ([]lint.ErrorMessage, error) {
+func (h *HasLivenessCheckLinter) Lintv1PodSpec(spec core_v1.PodSpec) ([]lint.ErrorMessage, error) {
 	var ret []lint.ErrorMessage
 
 	containers := append(spec.Containers, spec.InitContainers...)
 
 	for _, v := range containers {
-		if _, ok := v.Resources.Requests["memory"]; !ok {
-			ret = append(ret, lint.ErrorMessage(fmt.Sprintf("container \"%s\" has no memory request configured", v.Name)))
+		if v.LivenessProbe == nil {
+			ret = append(ret, lint.ErrorMessage(fmt.Sprintf("container \"%s\" does not have a liveness probe", v.Name)))
 		}
 	}
 
